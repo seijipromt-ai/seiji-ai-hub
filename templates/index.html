@@ -1,0 +1,21 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050a10"><title>SEIJI AI HUB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head><body>
+<div class="layout"><aside id="sidebar"><a class="brand" href="#"><b>S</b><span>SEIJI<small>AI HUB</small></span></a>
+<nav><button class="nav active" data-mode="chat">⌂　Home</button><button class="nav" data-mode="chat">◉　AI Chat</button><button class="nav" data-mode="code">‹/›　Code Assistant</button><button class="nav" data-mode="writer">✦　Text Generator</button><button class="nav" data-mode="study">▱　Study Assistant</button></nav>
+<div class="quote">“Dream Bigger,<br>Code Stronger.”<small>— Seiji</small></div><div class="online">● Gemini connection</div></aside>
+<main><header><button id="menu">☰</button><strong>SEIJI <em>AI HUB</em></strong><span class="model">● {{ model }}</span></header>
+<section class="hero"><div><small>YOUR PERSONAL AI WORKSPACE</small><h1>SEIJI<br><em>AI HUB</em></h1><p>Chat · Code · Create · Learn</p><i></i></div><div class="mascot">S<span>✦</span><small>SEIJI INTERNAL</small></div></section>
+<section><div class="section-title">▌ Quick Tools <small>Choose your assistant</small></div><div class="tools">
+<button data-mode="chat"><b>◉</b><strong>AI Chat</strong><small>Ask anything to your AI assistant.</small></button>
+<button data-mode="code"><b>&lt;/&gt;</b><strong>Code Assistant</strong><small>Generate, debug and explain code.</small></button>
+<button data-mode="writer"><b>▤</b><strong>Text Generator</strong><small>Create captions and content.</small></button>
+<button data-mode="study"><b>⌑</b><strong>Study Assistant</strong><small>Learn topics step by step.</small></button></div></section>
+<section class="workspace"><div class="welcome"><div><b>✦</b><span><strong id="title">Start a Conversation</strong><small id="subtitle">Hi there! How can I help you today?</small></span></div><label>✦ Powered by Gemini</label></div>
+<div class="suggestions"><button>Explain AI in simple terms</button><button>Write a Python script</button><button>Give me study tips</button></div>
+<div id="log" aria-live="polite"><div class="empty"><b>S</b><p>Your next idea starts here.</p><small>Ask a question or choose a tool above.</small></div></div>
+<form id="form"><textarea id="message" rows="1" placeholder="Message SEIJI AI..." aria-label="Message"></textarea><button id="send" type="submit">➤</button></form><p class="disclaimer">AI can make mistakes. Check important information.</p></section>
+<footer>SEIJI AI HUB v1.0　|　Made with ♥ by Seiji <span>BLACK × CYAN · GEMINI POWERED</span></footer></main></div>
+<div id="toast"></div><script src="{{ url_for('static', filename='app.js') }}" defer></script></body></html>
