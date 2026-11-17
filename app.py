@@ -1,56 +1,96 @@
-import os, json, urllib.request, urllib.error
-from flask import Flask, render_template, request, jsonify
+
+import os
+import requests
+from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
-MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 
-@app.get("/")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
+
+@app.route("/")
 def home():
-    return render_template("index.html", model=MODEL)
+    return render_template("index.html")
 
-@app.get("/api/health")
-def health():
-    return jsonify(ok=True, configured=bool(os.getenv("GEMINI_API_KEY")), model=MODEL)
 
-@app.post("/api/chat")
+@app.route("/api/chat", methods=["POST"])
 def chat():
-    key = os.getenv("GEMINI_API_KEY")
-    if not key:
-        return jsonify(error="Set GEMINI_API_KEY in Vercel Environment Variables."), 503
+    if not GEMINI_API_KEY:
+        return jsonify({
+            "error": "Gemini API key is not configured."
+        }), 500
+
     data = request.get_json(silent=True) or {}
-    message = (data.get("message") or "").strip()
+    message = data.get("message", "").strip()
+
     if not message:
-        return jsonify(error="Please enter a message."), 400
-    if len(message) > 12000:
-        return jsonify(error="Message is too long."), 400
-    mode = data.get("mode", "chat")
-    prompts = {
-        "chat": "You are Seiji AI, a friendly and helpful assistant.",
-        "code": "You are Seiji Code Assistant. Help write, debug, and explain code with safe examples.",
-        "writer": "You are Seiji Text Generator. Help draft, rewrite, and brainstorm useful text.",
-        "study": "You are Seiji Study Assistant. Explain step by step in simple language with examples."
+        return jsonify({
+            "error": "Please enter a message."
+        }), 400
+
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/"
+        f"models/{GEMINI_MODEL}:generateContent"
+    )
+
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY
     }
-    contents = []
-    for item in (data.get("history") or [])[-10:]:
-        if item.get("role") in ("user", "model") and isinstance(item.get("text"), str):
-            contents.append({"role": item["role"], "parts": [{"text": item["text"][:6000]}]})
-    contents.append({"role":"user","parts":[{"text":prompts.get(mode, prompts["chat"]) + "\n\n" + message}]})
-    payload = json.dumps({"contents": contents}).encode()
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
-    req = urllib.request.Request(url, data=payload, method="POST",
-        headers={"Content-Type":"application/json", "X-goog-api-key":key})
+
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": message}
+                ]
+            }
+        ]
+    }
+
     try:
-        with urllib.request.urlopen(req, timeout=45) as response:
-            result = json.loads(response.read().decode())
-        parts = result.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-        reply = "\n".join(p.get("text","") for p in parts if p.get("text"))
-        return jsonify(reply=reply or "Gemini returned an empty response.", model=MODEL)
-    except urllib.error.HTTPError as e:
-        try: msg = json.loads(e.read().decode()).get("error",{}).get("message","Gemini API error.")
-        except Exception: msg = "Gemini API error."
-        return jsonify(error=msg), e.code if 400 <= e.code < 600 else 502
-    except Exception:
-        return jsonify(error="Could not reach Gemini. Please try again."), 502
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
+
+        response.raise_for_status()
+        result = response.json()
+
+        answer = (
+            result.get("candidates", [{}])[0]
+            .get("content", {})
+            .get("parts", [{}])[0]
+            .get("text", "")
+        )
+
+        if not answer:
+            return jsonify({
+                "error": "The AI returned an empty response."
+            }), 502
+
+        return jsonify({"reply": answer})
+
+    except requests.exceptions.Timeout:
+        return jsonify({
+            "error": "The AI request timed out. Please try again."
+        }), 504
+
+    except requests.exceptions.RequestException:
+        return jsonify({
+            "error": "Unable to connect to the AI service."
+        }), 502
+
+    except (KeyError, IndexError, TypeError, ValueError):
+        return jsonify({
+            "error": "Invalid response from the AI service."
+        }), 502
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT","5000")), debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000))
+    )
